@@ -1,4 +1,4 @@
-name: Build Flint2 Packages
+name: Build Flint2 Extra Packages
 
 on:
   workflow_dispatch:
@@ -21,26 +21,30 @@ jobs:
           tar --use-compress-program=unzstd -xf openwrt-sdk-24.10.4-mediatek-filogic_gcc-13.3.0_musl.Linux-x86_64.tar.zst
           mv openwrt-sdk-24.10.4-mediatek-filogic_gcc-13.3.0_musl.Linux-x86_64 sdk
 
-      - name: Update feeds
+      - name: Add third-party feeds
         run: |
           cd sdk
+          echo "src-git small https://github.com/kenzok8/small-package.git" >> feeds.conf.default
+          echo "src-git luci-app-sing-box https://github.com/lxiaya/openwrt-luci-app-sing-box.git" >> feeds.conf.default
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
-      - name: Show available packages
+      - name: Find packages
         run: |
           cd sdk
-          ./scripts/feeds search sing-box || true
-          ./scripts/feeds search homeproxy || true
+          find feeds package -iname "*sing*box*" || true
+          find feeds package -iname "*homeproxy*" || true
 
-      - name: Build sing-box
+      - name: Build packages
         run: |
           cd sdk
           make defconfig
-          make package/sing-box/compile V=s
+          make package/sing-box/compile V=s || true
+          make package/luci-app-sing-box/compile V=s || true
+          make package/luci-app-homeproxy/compile V=s || true
 
       - name: Upload IPK packages
         uses: actions/upload-artifact@v4
         with:
-          name: flint2-ipk-packages
+          name: flint2-extra-ipk
           path: sdk/bin/packages/**/*.ipk
